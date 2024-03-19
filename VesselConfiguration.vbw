@@ -1,0 +1,9 @@
+frmVesExplorer = 56, 184, 1080, 834, C, 104, 104, 1128, 754, C
+mdiVesConfig = 155, 245, 1179, 895, C, 239, 296, 1263, 946, C
+mDatabase = 26, 26, 1143, 615, C
+mDeclaration = 156, 156, 1180, 806, C
+mFunction = 78, 78, 1247, 622, C
+frmNewVessel = 26, 26, 1050, 676, C, 78, 78, 1102, 728, C
+frmLoadVessel = 52, 52, 1221, 596, C, 130, 130, 1154, 780, C
+frmCopyVessel = 78, 78, 1102, 728, C, 52, 52, 1076, 702, C
+frmConfig = 234, 234, 1258, 884, C, 26, 26, 1050, 676, C
