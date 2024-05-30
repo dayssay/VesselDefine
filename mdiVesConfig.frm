@@ -1339,7 +1339,7 @@ Private Sub SetDef65v(sFileName As String)
         If NullTrim(tStr) <> "" Then
           If j < 27 Then
             iRow = j - (iStarboardRows - iHMaxRows)
-            If iRow > 0 Then gVessel.gBay(i).gRow(0, iRow).sNo = NullTrim(tStr)
+            If iRow > 0 And iRow <= gVessel.iHMaxRows Then gVessel.gBay(i).gRow(0, iRow).sNo = NullTrim(tStr)
             
           ElseIf j < 53 Then
             If (j - 26) <= gVessel.gBay(i).iTopTierIdx Then
@@ -1351,10 +1351,10 @@ Private Sub SetDef65v(sFileName As String)
               iTier = (j - 26) - gVessel.gBay(i).iTopTierIdx
             End If
             
-            If iTier > 0 Then gVessel.gBay(i).gTier(iHD, iTier).sNo = NullTrim(tStr)
+            If iTier > 0 And iTier <= gVessel.iMaxTiers Then gVessel.gBay(i).gTier(iHD, iTier).sNo = NullTrim(tStr)
           Else
             iRow = (j - 52) - iPortRows
-            If iRow > 0 Then gVessel.gBay(i).gRow(1, iRow).sNo = NullTrim(tStr)
+            If iRow > 0 And iRow <= gVessel.iDMaxRows Then gVessel.gBay(i).gRow(1, iRow).sNo = NullTrim(tStr)
           End If
         End If
       End If
