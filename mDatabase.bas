@@ -63,11 +63,11 @@ Public Sub GetVslStructure(sVslCd$)
     gVessel.nTopHgt = NullTrim(gRs!nTopHgt)
     gVessel.nAntHgt = NullTrim(gRs!nAntHgt)
     gVessel.iDMaxRows = NullTrim(gRs!IDMAXROW)
-    gVessel.iDMaxTiers = NullTrim(gRs!IDMAXTIER)
+    gVessel.iDMaxTiers = NullTrim(gRs!iDMaxTier)
     gVessel.iHMaxRows = NullTrim(gRs!IHMAXROW)
-    gVessel.iHMaxTiers = NullTrim(gRs!IHMAXTIER)
+    gVessel.iHMaxTiers = NullTrim(gRs!iHMaxTier)
     gVessel.iNoHatchs = NullTrim(gRs!INOHATCH)
-    gVessel.iNoBays = NullTrim(gRs!iNoBay)
+    gVessel.iNoBays = NullTrim(gRs!INOBAY)
     gVessel.iBgNo = NullTrim(gRs!iBgNo)
     gVessel.nBgLength = NullTrim_Num(gRs!nBgLength)
     gVessel.sConfNm = NullTrim(gRs!INS_ID)
@@ -86,7 +86,7 @@ Public Sub GetVslStructure(sVslCd$)
       
     
     ReDim Preserve gVessel.gHatch(1 To NullTrim_Num(gRs!INOHATCH))
-    ReDim Preserve gVessel.gBay(1 To NullTrim_Num(gRs!iNoBay))
+    ReDim Preserve gVessel.gBay(1 To NullTrim_Num(gRs!INOBAY))
     
     gVessel.bSaveFlag = True
     
@@ -446,9 +446,114 @@ Public Function SaveVslStructure()
     Next j
   Next i
   
+  'SAVE VSP_STOWAGE
+  '최종확인인 경우 저장
+  If gVessel.sConfNm <> "" Then Call Save_Vsp_Stowage
+  
   MsgBox "Save Vessel Defined Info. Successfully!"
   Screen.MousePointer = 0
 End Function
+
+Private Sub Save_Vsp_Stowage()
+  Dim i%, j%
+  Dim iNoBays%, iDMaxTier%, iHMaxTier%, iMaxTier%
+  Dim sHD$, sRmk$, tStr$
+  Dim sBayNo$, sRowNo$, sTierNo$, iHchNo%, sExtBayNo$, iTierIdx%
+  Dim sVCode$
+  
+  sVCode = gVessel.sVCode
+  
+  SQL = "DELETE FROM VSP_STOWAGE WHERE SVCODE = '" & sVCode & "'"
+  G_Host_Con.Execute (SQL)
+  
+  SQL = "SELECT INOBAY, IDMAXTIER, IHMAXTIER FROM TB_VD_VESSEL WHERE SVCODE = '" & sVCode & "'"
+  Set gRs = G_Host_Con.Execute(SQL)
+    
+  If Not (gRs.BOF And gRs.EOF) Then
+    iNoBays = Val(NullTrim(gRs!INOBAY))
+    iDMaxTier = Val(NullTrim(gRs!iDMaxTier))
+    iHMaxTier = Val(NullTrim(gRs!iHMaxTier))
+  End If
+  
+  For i = 1 To iNoBays
+    For j = 0 To 1
+        sRmk = ""
+        
+        If j = 0 Then
+          sHD = "H"
+          iMaxTier = iHMaxTier
+        Else
+          sHD = "D"
+          iMaxTier = iDMaxTier
+        End If
+        
+        SQL = "SELECT IBAY, IROW, ITER, SELECT SBAYNO FROM TB_VD_BAY WHERE SVCODE = '' AND IBAY = ''"
+        SQL = SQL & "  FROM TB_VD_CELL"
+        SQL = SQL & " WHERE SVCODE = '" & sVCode & "' AND SS = 'Y' AND IBAY = '" & i & "' AND IHD = '" & j & "'"
+        
+        SQL = "SELECT IBAY,"
+        SQL = SQL & "       IROW,"
+        SQL = SQL & "       ITIER,"
+        SQL = SQL & "       (SELECT SBAYNO"
+        SQL = SQL & "          FROM TB_VD_BAY"
+        SQL = SQL & "         WHERE SVCODE = A.SVCODE AND IBAY = A.IBAY) BAYNO,"
+        SQL = SQL & "       (SELECT SNO"
+        SQL = SQL & "          FROM TB_VD_ROW"
+        SQL = SQL & "         WHERE SVCODE = A.SVCODE AND IBAY = A.IBAY AND IHD = A.IHD AND"
+        SQL = SQL & "               IROW = A.IROW) ROWNO,"
+        SQL = SQL & "       (SELECT SNO"
+        SQL = SQL & "          FROM TB_VD_TIER"
+        SQL = SQL & "         WHERE SVCODE = A.SVCODE AND IBAY = A.IBAY AND IHD = A.IHD AND"
+        SQL = SQL & "               ITIER = A.ITIER) TIERNO,"
+        SQL = SQL & "       (SELECT IHCH FROM TB_VD_BAY WHERE SVCODE = A.SVCODE AND IBAY = A.IBAY) HCHNO"
+        SQL = SQL & "  FROM TB_VD_CELL A"
+        SQL = SQL & " WHERE SVCODE = '" & sVCode & "' AND SS = 'Y' AND IBAY = '" & i & "' AND IHD = '" & j & "'"
+        SQL = SQL & " ORDER BY IROW, ITIER DESC"
+        Set gRs = G_Host_Con.Execute(SQL)
+        
+        If Not (gRs.BOF And gRs.EOF) Then
+          Do While Not gRs.EOF
+            sBayNo = NullTrim(gRs!bayno)
+            iHchNo = Val(NullTrim(gRs!HCHNO))
+            
+            iTierIdx = iMaxTier - Val(NullTrim(gRs!iTier)) + 1
+            
+            tStr = NullTrim(gRs!bayno) & NullTrim(gRs!rowno) & NullTrim(gRs!tierno) & "+" & sHD & "+" & Trim(Str(i)) & "-" & NullTrim(gRs!iRow) & "-" & Trim(Str(iTierIdx)) & "^"
+            
+            sRmk = sRmk & tStr
+            
+            gRs.MoveNext
+          Loop
+        End If
+        
+        SQL = "SELECT SBAYNO"
+        SQL = SQL & "  FROM TB_VD_BAY"
+        SQL = SQL & " WHERE SVCODE = '" & sVCode & "' AND IHCH = " & iHchNo & " AND SSIZE = '4'"
+        Set gRs = G_Host_Con.Execute(SQL)
+        
+        If Not (gRs.BOF And gRs.EOF) Then
+          sExtBayNo = NullTrim(gRs!sBayNo)
+        Else
+          sExtBayNo = sBayNo
+        End If
+        
+        If sRmk <> "" Then
+            SQL = "INSERT INTO VSP_STOWAGE"
+            SQL = SQL & "  (VSP_STOW_VESSEL,"
+            SQL = SQL & "   VSP_STOW_BAY,"
+            SQL = SQL & "   VSP_STOW_DH,"
+            SQL = SQL & "   VSP_STOW_INTBAY,"
+            SQL = SQL & "   VSP_STOW_STOWAGE,"
+            SQL = SQL & "   VSP_STOW_INTJOBBAY,"
+            SQL = SQL & "   VSP_STOW_EXTJOBBAY)"
+            SQL = SQL & "VALUES"
+            SQL = SQL & "  ('" & sVCode & "', '" & sBayNo & "', '" & sHD & "', " & i & ", '" & sRmk & "', " & iHchNo & ", '" & sExtBayNo & "')"
+            G_Host_Con.Execute (SQL)
+        End If
+    Next j
+  Next i
+  
+End Sub
 
 Public Function ChkVslCd(sVslCd$) As Boolean
   ChkVslCd = False
